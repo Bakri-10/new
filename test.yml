@@ -19,10 +19,11 @@ on:
           description: Please enter your subcription Name
         location_pair:
           type: choice
-          description: Pick the Primary and Secondary Location Pair
+          description: Select Primary-Secondary Location Pair
+          required: true
           options:
-            - "eastus2-centralus"
-            - "centralus-eastus2"
+            - '["eastus2","centralus"]'
+            - '["centralus","eastus2"]'
         environment:
           type: choice
           description: choose the environment
@@ -79,7 +80,7 @@ jobs:
     with:
       name: 'resource-group'
       subscription: '${{inputs.subscription}}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") ? "eastus2" : "centralus" }}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purposeRG}}'
   mysql-server_new_rg:
@@ -95,8 +96,8 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") ? "eastus2" : "centralus" }}'
-      secondary_location: '${{ contains(inputs.location_pair, "eastus2-") ? "centralus" : "eastus2" }}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
       purposeRG: '${{inputs.purposeRG}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
@@ -117,8 +118,8 @@ jobs:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
       purposeRG: '${{inputs.purposeRG}}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") && "eastus2" || "centralus" }}'
-      secondary_location: '${{ contains(inputs.location_pair, "eastus2-") && "centralus" || "eastus2" }}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
       subnetname: '${{inputs.subnetname}}'
@@ -137,8 +138,8 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") && "eastus2" || "centralus" }}'
-      secondary_location: '${{ contains(inputs.location_pair, "eastus2-") && "centralus" || "eastus2" }}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
       purposeRG: '${{inputs.purposeRG}}'
