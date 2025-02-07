@@ -1,151 +1,141 @@
-name: 'Deploy MSSQL Server'
-run-name: '${{github.actor}} - Deployingto_${{inputs.subscription}}_${{inputs.environment}}'
-
+name: 'Create MS SQL Server'
+run-name: ${{github.actor}}
 on:
-  workflow_dispatch:
-    inputs:
-      requesttype:
-        type: choice
-        required: true
-        description: Request Type
-        options:
-          - Create (with New RG)
-          - Create (with Existing RG)
-          - Remove
-        default: "Create (with New RG)"
-      subscription:
-        type: string
-        required: true
-        description: Please enter your subcription Name
-      location_pair:
-        type: choice
-        description: Select Primary-Secondary Location Pair
-        required: true
-        options:
-          - "eastus2-centralus"
-          - "centralus-eastus2"
-      environment:
-        type: choice
-        description: choose the environment
-        options:
-          - dev
-          - qa
-          - UAT
-          - Prod
-      purposeRG:
-        type: string
-        required: true
-        description: Resource Group Purpose.......... Hyphen designate an existing RG
-      purpose:
-        type: string
-        description: purpose/sequence
-        required: true
-      subnetname:
-        type: string
-        required: true
-        description: Enter the subnet name for db end points
-      dbcollation:
-        type: string
-        required: false
-        description: Specify Collation of the database
-        default: SQL_Latin1_General_CP1_CI_AS
-      skuname:
-        type: choice
-        description: select SKU_NAME used by Database
-        options:
-          - S0
-          - P2
-          - Basic
-          - ElasticPool
-          - BC_Gen5_2
-          - HS_Gen4_1
-          - GP_S_Gen5_2
-          - DW100c
-          - DS100
-      zoneredundancy:
-        type: choice
-        options:
-          - "false"
-          - "true"
-
+    workflow_call:
+      inputs:
+        name:
+          type: string
+          required: false
+        subscription:
+            type: string
+            required: true
+        location:
+          type: string
+          required: true
+        secondary_location:
+          type: string
+          required: true
+        environment:
+          type: string
+          required: true
+        purpose:
+          type: string
+          required: true
+        purposeRG:
+          type: string
+          required: false
+        subnetname:
+          type: string
+          required: true
+        dbcollation:
+          type: string
+          required: false
+        skuname:
+          type: string
+          required: false
+        zoneredundancy:
+          type: string
+          required: false
+      secrets:
+        ARM_CLIENT_ID:
+          required: true
+        ARM_CLIENT_SECRET:
+          required: true
+        ARM_SUBSCRIPTION_ID:
+          required: true
+        ARM_TENANT_ID:
+          required: true
+env:
+ permissions:
+ contents: read
 jobs:
-  resource-group:
-    if: (github.event.inputs.requestType == 'Create (with New RG)')
-    name: 'Deploying - resource-group'
-    uses: ./.github/workflows/CreateResourceGroup.yml
-    secrets:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-    with:
-      name: 'resource-group'
-      subscription: '${{ inputs.subscription }}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") ? "eastus2" : "centralus" }}'
-      environment: '${{ inputs.environment }}'
-      purpose: '${{ inputs.purposeRG }}'
+  mssql-server-reusable-workflow:
+    name: 'Creating - MSSQL Server'
+    env:
+        ARM_CLIENT_ID: ${{secrets.ARM_CLIENT_ID}}
+        ARM_CLIENT_SECRET: ${{secrets.ARM_CLIENT_SECRET}}
+        ARM_TENANT_ID: ${{secrets.ARM_TENANT_ID}}
+        ARM_SUBSCRIPTION_ID: ${{secrets.ARM_SUBSCRIPTION_ID}}
+        ROOT_PATH: 'Azure/${{inputs.name}}'
+    runs-on: ubuntu-latest
+    environment: ${{inputs.environment}}
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
 
-  mysql-server_new_rg:
-    if: (github.event.inputs.requestType == 'Create (with New RG)')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
-    needs: resource-group
-    secrets:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-    with:
-      name: 'mssql'
-      subscription: '${{ inputs.subscription }}'
-      location: '${{ startsWith(inputs.location_pair, "eastus2") ? "eastus2" : "centralus" }}'
-      secondary_location: '${{ startsWith(inputs.location_pair, "eastus2") ? "centralus" : "eastus2" }}'
-      purposeRG: '${{ inputs.purposeRG }}'
-      environment: '${{ inputs.environment }}'
-      purpose: '${{ inputs.purpose }}'
-      subnetname: '${{ inputs.subnetname }}'
-      dbcollation: '${{ inputs.dbcollation }}'
-      skuname: '${{ inputs.skuname }}'
-      zoneredundancy: '${{ inputs.zoneredundancy }}'
-
-  mysql-server_existing_rg:
-    if: (github.event.inputs.requestType == 'Create (with Existing RG)')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
-    secrets:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-    with:
-      name: 'mssql'
-      subscription: '${{ inputs.subscription }}'
-      purposeRG: '${{ inputs.purposeRG }}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") ? "eastus2" : "centralus" }}'
-      environment: '${{ inputs.environment }}'
-      purpose: '${{ inputs.purpose }}'
-      subnetname: '${{ inputs.subnetname }}'
-      dbcollation: '${{ inputs.dbcollation }}'
-      skuname: '${{ inputs.skuname }}'
-      zoneredundancy: '${{ inputs.zoneredundancy }}'
-
-  mysql-server_remove:
-    if: (github.event.inputs.requestType == 'Remove')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
-    secrets:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-    with:
-      name: 'mssql'
-      subscription: '${{ inputs.subscription }}'
-      location: '${{ contains(inputs.location_pair, "eastus2-") ? "eastus2" : "centralus" }}'
-      environment: '${{ inputs.environment }}'
-      purpose: '${{ inputs.purpose }}'
-      purposeRG: '${{ inputs.purposeRG }}'
-      subnetname: '${{ inputs.subnetname }}'
-      dbcollation: '${{ inputs.dbcollation }}'
-      skuname: '${{ inputs.skuname }}'
-      zoneredundancy: '${{ inputs.zoneredundancy }}'
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Terraform Initialize
+      uses: hashicorp/terraform-github-actions@master
+      with:
+        tf_actions_version: latest
+        tf_actions_subcommand: 'init'
+        tf_actions_working_dir: ${{env.ROOT_PATH}}
+        tf_actions_comment: true
+      env:
+        TF_VAR_name: '${{inputs.name}}'
+        TF_VAR_location: '${{inputs.location}}'
+        TF_VAR_secondary_location: '${{inputs.secondary_location}}'
+        TF_VAR_environment: '${{inputs.environment}}'
+        TF_VAR_purpose: '${{inputs.purpose}}'
+        TF_VAR_purposeRG: '${{inputs.purposeRG}}'
+        TF_VAR_subnetname: '${{inputs.subnetname}}'
+        TF_VAR_dbcollation: '${{inputs.dbcollation}}'
+        TF_VAR_skuname: '${{inputs.skuname}}'
+        TF_VAR_zoneredundancy: '${{inputs.zoneredundancy}}'
+    - name: Terraform Plan
+      uses: hashicorp/terraform-github-actions@master
+      with:
+       tf_actions_version: latest
+       tf_actions_subcommand: 'plan'
+       tf_actions_working_dir: ${{env.ROOT_PATH}}
+       tf_actions_comment: true
+      env:
+        TF_VAR_name: '${{inputs.name}}'
+        TF_VAR_location: '${{inputs.location}}'
+        TF_VAR_environment: '${{inputs.environment}}'
+        TF_VAR_purpose: '${{inputs.purpose}}'
+        TF_VAR_purpose_rg: '${{inputs.purposeRG}}'
+        TF_VAR_subnetname: '${{inputs.subnetname}}'
+        TF_VAR_dbcollation: '${{inputs.dbcollation}}'
+        TF_VAR_skuname: '${{inputs.skuname}}'
+        TF_VAR_zoneredundancy: '${{inputs.zoneredundancy}}'
+    - name: Terraform apply
+      uses: hashicorp/terraform-github-actions@master
+      with:
+        tf_actions_version: latest
+        tf_actions_subcommand: 'apply'
+        tf_actions_working_dir: ${{env.ROOT_PATH}}
+        tf_actions_comment: true
+      env:
+        TF_VAR_name: '${{inputs.name}}'
+        TF_VAR_location: '${{inputs.location}}'
+        TF_VAR_secondary_location: '${{inputs.secondary_location}}'
+        TF_VAR_environment: '${{inputs.environment}}'
+        TF_VAR_purpose: '${{inputs.purpose}}'
+        TF_VAR_purpose_rg: '${{inputs.purposeRG}}'
+        TF_VAR_subnetname: '${{inputs.subnetname}}'
+        TF_VAR_dbcollation: '${{inputs.dbcollation}}'
+        TF_VAR_skuname: '${{inputs.skuname}}'
+        TF_VAR_zoneredundancy: '${{inputs.zoneredundancy}}'
+    - name: Terraform destroy
+      uses: hashicorp/terraform-github-actions@master
+      with:
+        tf_actions_version: latest
+        tf_actions_subcommand: 'apply'
+        tf_actions_working_dir: ${{env.ROOT_PATH}}
+        tf_actions_comment: true
+      env:
+        TF_VAR_name: '${{inputs.name}}'
+        TF_VAR_location: '${{inputs.location}}'
+        TF_VAR_secondary_location: '${{inputs.secondary_location}}'
+        TF_VAR_environment: '${{inputs.environment}}'
+        TF_VAR_purpose: '${{inputs.purpose}}'
+        TF_VAR_purpose_rg:  '${{inputs.purposeRG}}'
+        TF_VAR_subnetname: '${{inputs.subnetname}}'
+        TF_VAR_dbcollation: '${{inputs.dbcollation}}'
+        TF_VAR_skuname: '${{inputs.skuname}}'
+        TF_VAR_zoneredundancy: '${{inputs.zoneredundancy}}'
