@@ -1,0 +1,142 @@
+name: 'Create MS SQL Server'
+run-name: ${{github.actor}}
+on:
+    workflow_call:
+      inputs:
+        name:
+          type: string
+          required: false
+        subscription:
+          type: string
+          required: true
+        location:
+          type: string
+          required: true
+        secondary_location:
+          type: string
+          required: true
+        environment:
+          type: string
+          required: true
+        purpose:
+          type: string
+          required: true
+        purposeRG:
+          type: string
+          required: false
+        subnetname:
+          type: string
+          required: true
+        dbserverversion:
+          type: string
+          required: false
+          default: "12.0"
+        tlsversion:
+          type: string
+          required: false
+          default: "1.2"
+        destroy:
+          type: boolean
+          required: false
+          default: false
+      secrets:
+        ARM_CLIENT_ID:
+          required: true
+        ARM_CLIENT_SECRET:
+          required: true
+        ARM_SUBSCRIPTION_ID:
+          required: true
+        ARM_TENANT_ID:
+          required: true
+
+jobs:
+  mssql-server-deployment:
+    name: 'Deploying - MSSQL Server'
+    runs-on: ubuntu-latest
+    environment: ${{inputs.environment}}
+    env:
+        ARM_CLIENT_ID: ${{secrets.ARM_CLIENT_ID}}
+        ARM_CLIENT_SECRET: ${{secrets.ARM_CLIENT_SECRET}}
+        ARM_TENANT_ID: ${{secrets.ARM_TENANT_ID}}
+        ARM_SUBSCRIPTION_ID: ${{secrets.ARM_SUBSCRIPTION_ID}}
+        ROOT_PATH: 'Azure/mssql/server'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Terraform Init
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'init'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+
+      - name: Terraform Plan
+        if: inputs.destroy != true
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'plan'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+        env:
+          TF_VAR_location: ${{inputs.location}}
+          TF_VAR_secondary_location: ${{inputs.secondary_location}}
+          TF_VAR_environment: ${{inputs.environment}}
+          TF_VAR_purpose: ${{inputs.purpose}}
+          TF_VAR_purpose_rg: ${{inputs.purposeRG}}
+          TF_VAR_subnetname: ${{inputs.subnetname}}
+          TF_VAR_dbserverversion: ${{inputs.dbserverversion}}
+          TF_VAR_tlsversion: ${{inputs.tlsversion}}
+
+      - name: Terraform Plan Destroy
+        if: inputs.destroy == true
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'plan'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+          args: '-destroy'
+        env:
+          TF_VAR_location: ${{inputs.location}}
+          TF_VAR_secondary_location: ${{inputs.secondary_location}}
+          TF_VAR_environment: ${{inputs.environment}}
+          TF_VAR_purpose: ${{inputs.purpose}}
+          TF_VAR_purpose_rg: ${{inputs.purposeRG}}
+          TF_VAR_subnetname: ${{inputs.subnetname}}
+          TF_VAR_dbserverversion: ${{inputs.dbserverversion}}
+          TF_VAR_tlsversion: ${{inputs.tlsversion}}
+
+      - name: Terraform Apply
+        if: inputs.destroy != true
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'apply'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+        env:
+          TF_VAR_location: ${{inputs.location}}
+          TF_VAR_secondary_location: ${{inputs.secondary_location}}
+          TF_VAR_environment: ${{inputs.environment}}
+          TF_VAR_purpose: ${{inputs.purpose}}
+          TF_VAR_purpose_rg: ${{inputs.purposeRG}}
+          TF_VAR_subnetname: ${{inputs.subnetname}}
+          TF_VAR_dbserverversion: ${{inputs.dbserverversion}}
+          TF_VAR_tlsversion: ${{inputs.tlsversion}}
+
+      - name: Terraform Destroy
+        if: inputs.destroy == true
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'destroy'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+        env:
+          TF_VAR_location: ${{inputs.location}}
+          TF_VAR_secondary_location: ${{inputs.secondary_location}}
+          TF_VAR_environment: ${{inputs.environment}}
+          TF_VAR_purpose: ${{inputs.purpose}}
+          TF_VAR_purpose_rg: ${{inputs.purposeRG}}
+          TF_VAR_subnetname: ${{inputs.subnetname}}
+          TF_VAR_dbserverversion: ${{inputs.dbserverversion}}
+          TF_VAR_tlsversion: ${{inputs.tlsversion}} 

@@ -1,0 +1,104 @@
+name: 'Deploy SQL Server'
+run-name: '${{github.actor}} - Deployingto_${{inputs.subscription}}_${{inputs.environment}}'
+on:
+    workflow_dispatch:
+      inputs:
+        requesttype:
+          type: choice
+          required: true
+          description: Request Type
+          options:
+              - Create (with New RG)
+              - Create (with Existing RG)
+              - Remove 
+          default: "Create (with New RG)"
+        subscription:
+          type: string
+          required: true
+          description: Please enter your subcription Name
+        location_pair:
+          type: choice
+          description: Select Primary-Secondary Location Pair
+          required: true
+          options:
+            - '["eastus2","centralus"]'
+            - '["centralus","eastus2"]'
+        environment:
+          type: choice
+          description: choose the environment
+          options:
+             - dev
+             - qa 
+             - UAT
+             - Prod
+        purposeRG:
+          type: string
+          required: true
+          description: Resource Group Purpose.......... Hyphen designate an existing RG
+        purpose:
+          type: string
+          description: purpose/sequence
+          required: true
+        subnetname:
+          type: string
+          required: true
+          description: Enter the subnet name for db end points
+
+jobs:
+  sql-server_new_rg:
+    if: (github.event.inputs.requestType == 'Create (with New RG)')
+    name: 'Deploying - MSSQL server'
+    uses: ./.github/workflows/CreateMSSQLServer.yml
+    secrets: 
+      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
+      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
+      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
+    with:
+      name: 'mssql'
+      subscription: '${{inputs.subscription}}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      purposeRG: '${{inputs.purposeRG}}'
+      environment: '${{inputs.environment}}'
+      purpose: '${{inputs.purpose}}'
+      subnetname: '${{inputs.subnetname}}'
+
+  sql-server_existing_rg:
+    if: (github.event.inputs.requestType == 'Create (with Existing RG)')
+    name: 'Deploying - MSSQL server'
+    uses: ./.github/workflows/CreateMSSQLServer.yml
+    secrets: 
+      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
+      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
+      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
+    with:
+      name: 'mssql'
+      subscription: '${{inputs.subscription}}'
+      purposeRG: '${{inputs.purposeRG}}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      environment: '${{inputs.environment}}'
+      purpose: '${{inputs.purpose}}'
+      subnetname: '${{inputs.subnetname}}'
+
+  sql-server_remove:
+    if: (github.event.inputs.requestType == 'Remove')
+    name: 'Removing - MSSQL server'
+    uses: ./.github/workflows/CreateMSSQLServer.yml
+    secrets: 
+      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
+      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
+      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
+    with:
+      name: 'mssql'
+      subscription: '${{inputs.subscription}}'
+      location: '${{ fromJson(inputs.location_pair)[0] }}'
+      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      environment: '${{inputs.environment}}'
+      purpose: '${{inputs.purpose}}'
+      purposeRG: '${{inputs.purposeRG}}'
+      subnetname: '${{inputs.subnetname}}'
+      destroy: true 
