@@ -1,8 +1,8 @@
-name: 'Deploy SQL Server'
+name: 'Deploy MSSQL Server'
 run-name: '${{github.actor}} - Deployingto_${{inputs.subscription}}_${{inputs.environment}}'
 on:
     workflow_dispatch:
-      inputs:
+     inputs:
         requesttype:
           type: choice
           required: true
@@ -11,18 +11,26 @@ on:
               - Create (with New RG)
               - Create (with Existing RG)
               - Remove 
-          default: "Create (with New RG)"
+          default:
+              "Create (with New RG)"
         subscription:
           type: string
           required: true
           description: Please enter your subcription Name
-        location_pair:
+        location:
           type: choice
-          description: Select Primary-Secondary Location Pair
-          required: true
+          description: Pick the Location
           options:
-            - '["eastus2","centralus"]'
-            - '["centralus","eastus2"]'
+            - eastus2
+            - centralus
+        secondary_location:
+          type: choice
+          description: Pick the Location for secondary
+          options:
+            - eastus2
+            - centralus
+          default:
+              "centralus"
         environment:
           type: choice
           description: choose the environment
@@ -53,12 +61,27 @@ on:
           required: false
           default: "1.2"
           description: Minimum TLS version
-
 jobs:
-  sql-server_new_rg:
+  Deploying-Resource-Group:
+    if: (github.event.inputs.requestType == 'Create (with New RG)')
+    name: 'Deploying - resource-group'
+    uses: ./.github/workflows/CreateResourceGroup.yml
+    secrets:
+      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
+      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
+      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
+      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
+    with:
+      name: 'resource-group'
+      subscription: '${{inputs.subscription}}'
+      location: '${{inputs.location}}'
+      environment: '${{inputs.environment}}'
+      purpose: '${{inputs.purposeRG}}'
+  mysql-server_new_rg:
     if: (github.event.inputs.requestType == 'Create (with New RG)')
     name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/CreateMSSQLServer.yml
+    uses: ./.github/workflows/Createmssqlserver.yml
+    needs: Deploying-Resource-Group
     secrets: 
       ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
       ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
@@ -67,20 +90,18 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      location: '${{inputs.location}}'
+      secondary_location: '${{inputs.secondary_location}}'
+      purposeRG: '${{inputs.purposeRG}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
-      purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
       dbserverversion: '${{inputs.dbserverversion}}'
       tlsversion: '${{inputs.tlsversion}}'
-      destroy: false
-
-  sql-server_existing_rg:
+  mysql-server_existing_rg:
     if: (github.event.inputs.requestType == 'Create (with Existing RG)')
     name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/CreateMSSQLServer.yml
+    uses: ./.github/workflows/Createmssqlserver.yml
     secrets: 
       ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
       ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
@@ -89,20 +110,18 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      purposeRG: '${{inputs.purposeRG}}'
+      location: '${{inputs.location}}'
+      secondary_location: '${{inputs.secondary_location}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
-      purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
       dbserverversion: '${{inputs.dbserverversion}}'
       tlsversion: '${{inputs.tlsversion}}'
-      destroy: false
-
-  sql-server_remove:
+  mysql-server_remove:
     if: (github.event.inputs.requestType == 'Remove')
     name: 'Removing - MSSQL server'
-    uses: ./.github/workflows/CreateMSSQLServer.yml
+    uses: ./.github/workflows/Createmssqlserver.yml
     secrets: 
       ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
       ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
@@ -111,12 +130,11 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      location: '${{inputs.location}}'
+      secondary_location: '${{inputs.secondary_location}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
       purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
       dbserverversion: '${{inputs.dbserverversion}}'
       tlsversion: '${{inputs.tlsversion}}'
-      destroy: true 
