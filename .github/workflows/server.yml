@@ -43,6 +43,16 @@ on:
           type: string
           required: true
           description: Enter the subnet name for db end points
+        dbserverversion:
+          type: string
+          required: false
+          default: "12.0"
+          description: SQL Server version
+        tlsversion:
+          type: string
+          required: false
+          default: "1.2"
+          description: Minimum TLS version
 
 jobs:
   sql-server_new_rg:
@@ -59,10 +69,13 @@ jobs:
       subscription: '${{inputs.subscription}}'
       location: '${{ fromJson(inputs.location_pair)[0] }}'
       secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
-      purposeRG: '${{inputs.purposeRG}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
+      purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
+      dbserverversion: '${{inputs.dbserverversion}}'
+      tlsversion: '${{inputs.tlsversion}}'
+      destroy: false
 
   sql-server_existing_rg:
     if: (github.event.inputs.requestType == 'Create (with Existing RG)')
@@ -76,12 +89,15 @@ jobs:
     with:
       name: 'mssql'
       subscription: '${{inputs.subscription}}'
-      purposeRG: '${{inputs.purposeRG}}'
       location: '${{ fromJson(inputs.location_pair)[0] }}'
       secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
+      purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
+      dbserverversion: '${{inputs.dbserverversion}}'
+      tlsversion: '${{inputs.tlsversion}}'
+      destroy: false
 
   sql-server_remove:
     if: (github.event.inputs.requestType == 'Remove')
@@ -101,4 +117,6 @@ jobs:
       purpose: '${{inputs.purpose}}'
       purposeRG: '${{inputs.purposeRG}}'
       subnetname: '${{inputs.subnetname}}'
+      dbserverversion: '${{inputs.dbserverversion}}'
+      tlsversion: '${{inputs.tlsversion}}'
       destroy: true 
