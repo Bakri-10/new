@@ -1,29 +1,46 @@
-name: 'Deploy MSSQL Server'
+name: 'Deploy SQL Failover Group'
 run-name: '${{github.actor}} - Deployingto_${{inputs.subscription}}_${{inputs.environment}}'
 on:
-    workflow_dispatch:
-     inputs:
+  workflow_dispatch:
+      inputs:
         requesttype:
           type: choice
           required: true
           description: Request Type
           options:
-              - Create (with New RG)
-              - Create (with Existing RG)
-              - Remove 
-          default:
-              "Create (with New RG)"
+              - Create
+              - Remove
+          default: "Create"
+        primary_server_id:
+          type: string
+          required: true
+          description: Primary SQL Server Resource ID
+        secondary_server_id:
+          type: string
+          required: true
+          description: Secondary SQL Server Resource ID
+        database_ids:
+          type: string
+          required: true
+          description: Database IDs (comma-separated list)
         subscription:
           type: string
           required: true
           description: Please enter your subcription Name
-        location_pair:
+        location:
           type: choice
-          description: Select Primary-Secondary Location Pair
-          required: true
+          description: Pick the Location
           options:
-            - '["eastus2","centralus"]'
-            - '["centralus","eastus2"]'
+            - eastus2
+            - centralus
+        secondary_location:
+          type: choice
+          description: Pick the Location for secondary
+          options:
+            - eastus2
+            - centralus
+          default:
+              "centralus"
         environment:
           type: choice
           description: choose the environment
@@ -32,118 +49,46 @@ on:
              - qa 
              - UAT
              - Prod
-        purposeRG:
-          type: string
-          required: true
-          description: Resource Group Purpose.......... Hyphen designate an existing RG
         purpose:
           type: string
-          description: purpose/sequence
+          description: Failover Group purpose
           required: true
-        subnetname:
-          type: string
-          required: true
-          description: Enter the subnet name for db end points
-        dbcollation:
-          type: string
-          required: false
-          description: Specify Collation of the database
-          default: SQL_Latin1_General_CP1_CI_AS
-        skuname:
-          type: choice
-          description: select SKU_NAME used by Database
-          options:
-            - S0
-            - P2
-            - Basic
-            - ElasticPool
-            - BC_Gen5_2
-            - HS_Gen4_1
-            - GP_S_Gen5_2
-            - DW100c
-            - DS100
-        zoneredundancy:
-          type: choice
-          options:
-            - "false"
-            - "true"
+
 jobs:
-  resource-group:
-    if: (github.event.inputs.requestType == 'Create (with New RG)')
-    name: 'Deploying - resource-group'
-    uses: ./.github/workflows/CreateResourceGroup.yml
-    secrets:
-      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
-      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
-      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
-      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
-    with:
-      name: 'resource-group'
-      subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      environment: '${{inputs.environment}}'
-      purpose: '${{inputs.purposeRG}}'
-  mysql-server_new_rg:
-    if: (github.event.inputs.requestType == 'Create (with New RG)')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
-    needs: resource-group
+  sql-failover_create:
+    if: (github.event.inputs.requestType == 'Create')
+    name: 'Deploying - MSSQL Failover Group'
+    uses: ./.github/workflows/Createmssqlfailover.yml
     secrets: 
       ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
       ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
       ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
       ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
     with:
-      name: 'mssql'
-      subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
-      purposeRG: '${{inputs.purposeRG}}'
+      name: 'mssql-failover'
+      primary_server_id: '${{inputs.primary_server_id}}'
+      secondary_server_id: '${{inputs.secondary_server_id}}'
+      database_ids: '${{inputs.database_ids}}'
+      location: '${{inputs.location}}'
+      secondary_location: '${{inputs.secondary_location}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
-      subnetname: '${{inputs.subnetname}}'
-      dbcollation: '${{inputs.dbcollation}}'
-      skuname: '${{inputs.skuname}}'
-      zoneredundancy: '${{inputs.zoneredundancy}}'
-  mysql-server_existing_rg:
-    if: (github.event.inputs.requestType == 'Create (with Existing RG)')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
-    secrets: 
-      ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
-      ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
-      ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
-      ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
-    with:
-      name: 'mssql'
-      subscription: '${{inputs.subscription}}'
-      purposeRG: '${{inputs.purposeRG}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
-      environment: '${{inputs.environment}}'
-      purpose: '${{inputs.purpose}}'
-      subnetname: '${{inputs.subnetname}}'
-      dbcollation: '${{inputs.dbcollation}}'
-      skuname: '${{inputs.skuname}}'
-      zoneredundancy: '${{inputs.zoneredundancy}}'
-  mysql-server_remove:
+
+  sql-failover_remove:
     if: (github.event.inputs.requestType == 'Remove')
-    name: 'Deploying - MSSQL server'
-    uses: ./.github/workflows/Createmssqlserver.yml
+    name: 'Removing - MSSQL Failover Group'
+    uses: ./.github/workflows/Createmssqlfailover.yml
     secrets: 
       ARM_CLIENT_ID: ${{secrets.AZURE_CLIENT_ID}}
       ARM_CLIENT_SECRET: ${{secrets.AZURE_CLIENT_SECRET}}
       ARM_SUBSCRIPTION_ID: ${{secrets.AZURE_SUBSCRIPTION_ID}}
       ARM_TENANT_ID: ${{secrets.AZURE_TENANT_ID}}
     with:
-      name: 'mssql'
-      subscription: '${{inputs.subscription}}'
-      location: '${{ fromJson(inputs.location_pair)[0] }}'
-      secondary_location: '${{ fromJson(inputs.location_pair)[1] }}'
+      name: 'mssql-failover'
+      primary_server_id: '${{inputs.primary_server_id}}'
+      secondary_server_id: '${{inputs.secondary_server_id}}'
+      database_ids: '${{inputs.database_ids}}'
+      location: '${{inputs.location}}'
+      secondary_location: '${{inputs.secondary_location}}'
       environment: '${{inputs.environment}}'
       purpose: '${{inputs.purpose}}'
-      purposeRG: '${{inputs.purposeRG}}'
-      subnetname: '${{inputs.subnetname}}'
-      dbcollation: '${{inputs.dbcollation}}'
-      skuname: '${{inputs.skuname}}'
-      zoneredundancy: '${{inputs.zoneredundancy}}'
