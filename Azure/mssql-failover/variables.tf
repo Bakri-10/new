@@ -1,15 +1,5 @@
-variable "primary_server_name" {
-  type        = string
-  description = "Name of the primary SQL Server"
-}
-
-variable "secondary_server_name" {
-  type        = string
-  description = "Name of the secondary SQL Server"
-}
-
 variable "database_names" {
-  type        = string
+  type        = list(string)
   description = "Comma-separated list of database names to include in failover group"
 }
 
