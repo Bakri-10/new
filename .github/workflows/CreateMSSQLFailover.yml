@@ -1,5 +1,5 @@
 name: 'Create MS SQL Failover Group'
-run-name: ${{github.actor}}
+run-name: ${{ github.actor }}
 on:
     workflow_call:
       inputs:
@@ -52,13 +52,13 @@ jobs:
   mssql-failover-deployment:
     name: 'Deploying - MSSQL Failover Group'
     env:
-        ARM_CLIENT_ID: ${{secrets.ARM_CLIENT_ID}}
-        ARM_CLIENT_SECRET: ${{secrets.ARM_CLIENT_SECRET}}
-        ARM_TENANT_ID: ${{secrets.ARM_TENANT_ID}}
-        ARM_SUBSCRIPTION_ID: ${{secrets.ARM_SUBSCRIPTION_ID}}
-        ROOT_PATH: 'Azure/${{inputs.name}}'
+        ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        ROOT_PATH: 'Azure/${{ inputs.name }}'
     runs-on: ubuntu-latest
-    environment: ${{inputs.environment}}
+    environment: ${{ inputs.environment }}
     defaults:
       run:
         shell: bash
@@ -71,8 +71,7 @@ jobs:
       with:
         tf_actions_version: latest
         tf_actions_subcommand: 'init'
-        tf_actions_working_dir: ${{env.ROOT_PATH}}
-        tf_actions_comment: true
+        tf_actions_working_dir: ${{ env.ROOT_PATH }}
 
     - name: Terraform Plan
       if: ${{ inputs.requestType == 'Create' }}
@@ -80,17 +79,16 @@ jobs:
       with:
         tf_actions_version: latest
         tf_actions_subcommand: 'plan'
-        tf_actions_working_dir: ${{env.ROOT_PATH}}
-        tf_actions_comment: true
+        tf_actions_working_dir: ${{ env.ROOT_PATH }}
       env:
-          TF_VAR_primary_server_name: ${{inputs.primary_server_name}}
-          TF_VAR_secondary_server_name: ${{inputs.secondary_server_name}}
-          TF_VAR_database_names: ${{inputs.database_names}}
-          TF_VAR_location: ${{inputs.location}}
-          TF_VAR_secondary_location: ${{inputs.secondary_location}}
-          TF_VAR_environment: ${{inputs.environment}}
-          TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_purpose_rg: ${{inputs.purpose_rg}}
+          TF_VAR_primary_server_name: ${{ inputs.primary_server_name }}
+          TF_VAR_secondary_server_name: ${{ inputs.secondary_server_name }}
+          TF_VAR_database_names: ${{ inputs.database_names }}
+          TF_VAR_location: ${{ inputs.location }}
+          TF_VAR_secondary_location: ${{ inputs.secondary_location }}
+          TF_VAR_environment: ${{ inputs.environment }}
+          TF_VAR_purpose: ${{ inputs.purpose }}
+          TF_VAR_purpose_rg: ${{ inputs.purpose_rg }}
 
     - name: Terraform Destroy
       if: ${{ inputs.requestType == 'Remove' }}
@@ -98,17 +96,16 @@ jobs:
       with:
         tf_actions_version: latest
         tf_actions_subcommand: 'destroy'
-        tf_actions_working_dir: ${{env.ROOT_PATH}}
-        tf_actions_comment: true
+        tf_actions_working_dir: ${{ env.ROOT_PATH }}
       env:
-          TF_VAR_primary_server_name: ${{inputs.primary_server_name}}
-          TF_VAR_secondary_server_name: ${{inputs.secondary_server_name}}
-          TF_VAR_database_names: ${{inputs.database_names}}
-          TF_VAR_location: ${{inputs.location}}
-          TF_VAR_secondary_location: ${{inputs.secondary_location}}
-          TF_VAR_environment: ${{inputs.environment}}
-          TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_purpose_rg: ${{inputs.purpose_rg}}
+          TF_VAR_primary_server_name: ${{ inputs.primary_server_name }}
+          TF_VAR_secondary_server_name: ${{ inputs.secondary_server_name }}
+          TF_VAR_database_names: ${{ inputs.database_names }}
+          TF_VAR_location: ${{ inputs.location }}
+          TF_VAR_secondary_location: ${{ inputs.secondary_location }}
+          TF_VAR_environment: ${{ inputs.environment }}
+          TF_VAR_purpose: ${{ inputs.purpose }}
+          TF_VAR_purpose_rg: ${{ inputs.purpose_rg }}
 
     - name: Terraform Apply
       if: ${{ inputs.requestType == 'Create' }}
@@ -116,14 +113,13 @@ jobs:
       with:
         tf_actions_version: latest
         tf_actions_subcommand: 'apply'
-        tf_actions_working_dir: ${{env.ROOT_PATH}}
-        tf_actions_comment: true
+        tf_actions_working_dir: ${{ env.ROOT_PATH }}
       env:
-          TF_VAR_primary_server_name: ${{inputs.primary_server_name}}
-          TF_VAR_secondary_server_name: ${{inputs.secondary_server_name}}
-          TF_VAR_database_names: ${{inputs.database_names}}
-          TF_VAR_location: ${{inputs.location}}
-          TF_VAR_secondary_location: ${{inputs.secondary_location}}
-          TF_VAR_environment: ${{inputs.environment}}
-          TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_purpose_rg: ${{inputs.purpose_rg}} 
+          TF_VAR_primary_server_name: ${{ inputs.primary_server_name }}
+          TF_VAR_secondary_server_name: ${{ inputs.secondary_server_name }}
+          TF_VAR_database_names: ${{ inputs.database_names }}
+          TF_VAR_location: ${{ inputs.location }}
+          TF_VAR_secondary_location: ${{ inputs.secondary_location }}
+          TF_VAR_environment: ${{ inputs.environment }}
+          TF_VAR_purpose: ${{ inputs.purpose }}
+          TF_VAR_purpose_rg: ${{ inputs.purpose_rg }} 
