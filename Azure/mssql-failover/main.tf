@@ -30,22 +30,21 @@ data "azurerm_resource_group" "rg" {
   name     = join("-", [local.naming.bu, local.naming.environment, local.env_location.locations_abbreviation, var.purpose_rg, "rg"])
 }
 
-# Get primary server details
 data "azurerm_mssql_server" "primary_server" {
-  name                = var.primary_server_name
+  name                = join("", [local.naming.bu, "-", local.naming.environment, "-", local.env_location.locations_abbreviation, "-", local.purpose, "-sql-", local.sequence]) 
   resource_group_name = one(values(data.azurerm_resource_group.rg)).name
 }
 
 # Get secondary server details
 data "azurerm_mssql_server" "secondary_server" {
-  name                = var.secondary_server_name
+  name                = join("", [local.naming.bu, "-", local.naming.environment, "-", local.env_location.secondary_location_abbreviation, "-", local.purpose, "-sql-", local.sequence])
   resource_group_name = one(values(data.azurerm_resource_group.rg)).name
 }
 
 # Get database details
 data "azurerm_mssql_database" "databases" {
-  for_each  = toset(split(",", var.database_names))
-  name      = each.value
+  for_each = { for idx, purpose in var.database_names : "${idx}" => purpose }
+  name      = join("", [local.naming.bu, "-", local.naming.environment, "-", local.env_location.locations_abbreviation, "-", each.value, "-sqldb-", local.sequence])
   server_id = data.azurerm_mssql_server.primary_server.id
 }
 
@@ -70,10 +69,6 @@ resource "azurerm_mssql_failover_group" "failover" {
     grace_minutes = 60
   }
 
-  tags = {
-    environment = local.naming.environment
-    purpose     = local.purpose
-  }
 }
 
 output "failover_group_id" {
