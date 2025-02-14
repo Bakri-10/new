@@ -3,6 +3,12 @@ run-name: ${{github.actor}}
 on:
     workflow_call:
       inputs:
+        name:
+          type: string
+          required: false
+        subscription:
+            type: string
+            required: true
         server_id:
           type: string
           required: true
@@ -15,27 +21,18 @@ on:
         purpose:
           type: string
           required: true
-        db_purpose:
+        db_names:
           type: string
           required: true
-        collation:
+        purposeRG:
           type: string
-          required: false
-          default: "SQL_Latin1_General_CP1_CI_AS"
+          required: true
         skuname:
           type: string
           required: true
         zoneredundancy:
           type: string
           required: false
-          default: "false"
-        destroy:
-          type: boolean
-          required: false
-          default: false
-        subscription:
-          type: string
-          required: true
       secrets:
         ARM_CLIENT_ID:
           required: true
@@ -45,19 +42,24 @@ on:
           required: true
         ARM_TENANT_ID:
           required: true
-
+env:
+ permissions:
+ contents: read
 jobs:
   mssql-database-deployment:
-    name: 'Deploying - MSSQL Database'
-    runs-on: ubuntu-latest
-    environment: ${{inputs.environment}}
     env:
         ARM_CLIENT_ID: ${{secrets.ARM_CLIENT_ID}}
         ARM_CLIENT_SECRET: ${{secrets.ARM_CLIENT_SECRET}}
         ARM_TENANT_ID: ${{secrets.ARM_TENANT_ID}}
         ARM_SUBSCRIPTION_ID: ${{secrets.ARM_SUBSCRIPTION_ID}}
-        ROOT_PATH: 'Azure/mssql/database'
-
+        ROOT_PATH: 'Azure/${{inputs.name}}'
+        name: 'Deploying - MSSQL Database'
+    runs-on: ubuntu-latest
+    environment: ${{inputs.environment}}
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -70,7 +72,7 @@ jobs:
           tf_actions_working_dir: ${{env.ROOT_PATH}}
 
       - name: Terraform Plan
-        if: inputs.destroy != true
+        if: ${{ inputs.requestType == 'Create' }}
         uses: hashicorp/terraform-github-actions@master
         with:
           tf_actions_version: latest
@@ -81,59 +83,42 @@ jobs:
           TF_VAR_location: ${{inputs.location}}
           TF_VAR_environment: ${{inputs.environment}}
           TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_db_purpose: ${{inputs.db_purpose}}
-          TF_VAR_collation: ${{inputs.collation}}
+          TF_VAR_purpose_rg: ${{inputs.purposeRG}}
+          TF_VAR_db_purpose: ${{inputs.db_names}}
           TF_VAR_skuname: ${{inputs.skuname}}
           TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}}
 
       - name: Terraform Plan Destroy
-        if: inputs.destroy == true
-        uses: hashicorp/terraform-github-actions@master
-        with:
-          tf_actions_version: latest
-          tf_actions_subcommand: 'plan'
-          tf_actions_working_dir: ${{env.ROOT_PATH}}
-          args: '-destroy'
-        env:
-          TF_VAR_server_id: ${{inputs.server_id}}
-          TF_VAR_location: ${{inputs.location}}
-          TF_VAR_environment: ${{inputs.environment}}
-          TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_db_purpose: ${{inputs.db_purpose}}
-          TF_VAR_collation: ${{inputs.collation}}
-          TF_VAR_skuname: ${{inputs.skuname}}
-          TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}}
-
-      - name: Terraform Apply
-        if: inputs.destroy != true
-        uses: hashicorp/terraform-github-actions@master
-        with:
-          tf_actions_version: latest
-          tf_actions_subcommand: 'apply'
-          tf_actions_working_dir: ${{env.ROOT_PATH}}
-        env:
-          TF_VAR_server_id: ${{inputs.server_id}}
-          TF_VAR_location: ${{inputs.location}}
-          TF_VAR_environment: ${{inputs.environment}}
-          TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_db_purpose: ${{inputs.db_purpose}}
-          TF_VAR_collation: ${{inputs.collation}}
-          TF_VAR_skuname: ${{inputs.skuname}}
-          TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}}
-
-      - name: Terraform Destroy
-        if: inputs.destroy == true
+        if: ${{ inputs.requestType == 'Remove' }}
         uses: hashicorp/terraform-github-actions@master
         with:
           tf_actions_version: latest
           tf_actions_subcommand: 'destroy'
           tf_actions_working_dir: ${{env.ROOT_PATH}}
+          tf_actions_comment: true
         env:
           TF_VAR_server_id: ${{inputs.server_id}}
           TF_VAR_location: ${{inputs.location}}
           TF_VAR_environment: ${{inputs.environment}}
           TF_VAR_purpose: ${{inputs.purpose}}
-          TF_VAR_db_purpose: ${{inputs.db_purpose}}
-          TF_VAR_collation: ${{inputs.collation}}
+          TF_VAR_db_purpose: ${{inputs.db_names}}
           TF_VAR_skuname: ${{inputs.skuname}}
-          TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}} 
+          TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}}
+
+      - name: Terraform Apply
+        if: ${{ inputs.requestType == 'Create' }}
+        uses: hashicorp/terraform-github-actions@master
+        with:
+          tf_actions_version: latest
+          tf_actions_subcommand: 'apply'
+          tf_actions_working_dir: ${{env.ROOT_PATH}}
+          tf_actions_comment: true
+        env:
+          TF_VAR_server_id: ${{inputs.server_id}}
+          TF_VAR_location: ${{inputs.location}}
+          TF_VAR_environment: ${{inputs.environment}}
+          TF_VAR_purpose: ${{inputs.purpose}}
+          TF_VAR_db_purpose: ${{inputs.db_names}}
+          TF_VAR_skuname: ${{inputs.skuname}}
+          TF_VAR_zoneredundancy: ${{inputs.zoneredundancy}}
+
