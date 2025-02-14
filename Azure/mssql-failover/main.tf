@@ -49,7 +49,6 @@ data "azurerm_mssql_database" "databases" {
 }
 
 resource "azurerm_mssql_failover_group" "failover" {
-  for_each  = { for inst in local.get_data : inst.unique_id => inst }
   
   name      = join("", [
     local.naming.bu, "-", local.naming.environment, "-",
